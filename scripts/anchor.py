@@ -34,7 +34,8 @@ def main() -> int:
     req = urllib.request.Request(
         f"{registry_url.rstrip('/')}/commit",
         data=payload,
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json",
+                 "User-Agent": "prml-verify-action (+https://github.com/falsify-dev/prml-verify-action)"},
         method="POST",
     )
 
