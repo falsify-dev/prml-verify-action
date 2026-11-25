@@ -134,7 +134,9 @@ jobs:
           echo "tamper correctly detected; integration test OK"
 
       - name: Write a manifest with a YAML anchor
-        run: sed 's/^seed: 42$/seed: \&s 42/' claim.prml.yaml > anchored.prml.yaml && grep -q '&s' anchored.prml.yaml
+        run: |
+          sed 's/^seed: 42$/seed: \&s 42/' claim.prml.yaml > anchored.prml.yaml
+          grep -q '&s' anchored.prml.yaml
 
       - name: SCHEMA — schema-only accepts the clean manifest (also proves the schema fetch works)
         uses: ./
