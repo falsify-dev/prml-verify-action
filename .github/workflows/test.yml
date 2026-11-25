@@ -133,6 +133,39 @@ jobs:
           fi
           echo "tamper correctly detected; integration test OK"
 
+      - name: Write a manifest with a YAML anchor
+        run: sed 's/^seed: 42$/seed: \&s 42/' claim.prml.yaml > anchored.prml.yaml && grep -q '&s' anchored.prml.yaml
+
+      - name: SCHEMA — schema-only accepts the clean manifest (also proves the schema fetch works)
+        uses: ./
+        with:
+          mode: schema-only
+          manifest-path: claim.prml.yaml
+
+      - name: ANCHOR — schema-only must reject a manifest with a YAML anchor
+        id: anchor_schema
+        continue-on-error: true
+        uses: ./
+        with:
+          mode: schema-only
+          manifest-path: anchored.prml.yaml
+
+      - name: ANCHOR — manifest mode must reject it too
+        id: anchor_manifest
+        continue-on-error: true
+        uses: ./
+        with:
+          mode: manifest
+          manifest-path: anchored.prml.yaml
+          expected-hash: ${{ steps.prep.outputs.hash }}
+
+      - name: Assert both modes rejected the anchored manifest
+        run: |
+          set -euo pipefail
+          test "${{ steps.anchor_schema.outcome }}" = "failure" || { echo "schema-only accepted an anchored manifest"; exit 1; }
+          test "${{ steps.anchor_manifest.outcome }}" = "failure" || { echo "manifest mode accepted an anchored manifest"; exit 1; }
+          echo "anchored manifest rejected in both modes"
+
   attestation:
     # Real end-to-end check of attest=true: create a GitHub artifact attestation
     # for a sample manifest, then verify it with `gh attestation verify`.

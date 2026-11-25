@@ -32,24 +32,28 @@ def main() -> int:
     schema_url, manifest_path, schema_label = sys.argv[1], sys.argv[2], sys.argv[3]
 
     try:
-        import yaml  # type: ignore[import-not-found]
+        import falsify_prml  # type: ignore[import-not-found]
         import jsonschema  # type: ignore[import-not-found]
     except ImportError as exc:
         sys.stderr.write(f"missing dependency: {exc}\n")
         return 2
 
     try:
-        with urllib.request.urlopen(schema_url, timeout=30) as r:
+        # An explicit User-Agent: the spec host refuses the default Python-urllib one.
+        req = urllib.request.Request(schema_url, headers={
+            "User-Agent": "prml-verify-action (+https://github.com/falsify-dev/prml-verify-action)"})
+        with urllib.request.urlopen(req, timeout=30) as r:
             schema = json.loads(r.read())
     except (urllib.error.URLError, json.JSONDecodeError, OSError) as exc:
         sys.stderr.write(f"could not fetch schema from {schema_url}: {exc}\n")
         return 2
 
+    # Read the manifest the way the reference implementation reads it, so a file
+    # that `falsify hash` rejects is rejected here too (exit 2), not schema-checked.
     try:
-        with open(manifest_path, encoding="utf-8") as f:
-            manifest = yaml.safe_load(f)
-    except (OSError, yaml.YAMLError) as exc:
-        sys.stderr.write(f"could not parse manifest {manifest_path}: {exc}\n")
+        manifest = falsify_prml.load_manifest(manifest_path)
+    except (OSError, ValueError) as exc:
+        sys.stderr.write(f"manifest rejected {manifest_path}: {exc}\n")
         return 2
 
     try:
